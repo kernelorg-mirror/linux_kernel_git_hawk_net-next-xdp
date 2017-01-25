@@ -9,6 +9,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <signal.h>
+#include <sys/resource.h>
 #include <linux/bpf.h>
 #include "libbpf.h"
 #include "bpf_load.h"
@@ -84,9 +85,16 @@ static void get_data(int fd)
 
 int main(int argc, char **argv)
 {
+	struct rlimit r = {RLIM_INFINITY, RLIM_INFINITY};
 	char filename[256];
 
 	snprintf(filename, sizeof(filename), "%s_kern.o", argv[0]);
+
+	/* Increase resource limits for map */
+	if (setrlimit(RLIMIT_MEMLOCK, &r)) {
+		perror("setrlimit(RLIMIT_MEMLOCK, RLIM_INFINITY)");
+		return 1;
+	}
 
 	if (load_bpf_file(filename)) {
 		printf("%s", bpf_log_buf);
