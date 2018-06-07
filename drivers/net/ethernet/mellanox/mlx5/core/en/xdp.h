@@ -47,7 +47,7 @@ void mlx5e_free_xdpsq_descs(struct mlx5e_xdpsq *sq);
 
 void mlx5e_xmit_xdp_doorbell(struct mlx5e_xdpsq *sq);
 bool mlx5e_xmit_xdp_frame(struct mlx5e_xdpsq *sq, struct mlx5e_xdp_info *xdpi);
-int mlx5e_xdp_xmit(struct net_device *dev, int n, struct xdp_frame **frames);
-void mlx5e_xdp_flush(struct net_device *dev);
+int mlx5e_xdp_xmit(struct net_device *dev, int n, struct xdp_frame **frames,
+		   u32 flags);
 
 #endif

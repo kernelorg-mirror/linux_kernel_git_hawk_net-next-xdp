@@ -254,7 +254,8 @@ void mlx5e_free_xdpsq_descs(struct mlx5e_xdpsq *sq)
 	}
 }
 
-int mlx5e_xdp_xmit(struct net_device *dev, int n, struct xdp_frame **frames)
+int mlx5e_xdp_xmit(struct net_device *dev, int n, struct xdp_frame **frames,
+		   u32 flags)
 {
 	struct mlx5e_priv *priv = netdev_priv(dev);
 	struct mlx5e_xdpsq *sq;
@@ -264,6 +265,9 @@ int mlx5e_xdp_xmit(struct net_device *dev, int n, struct xdp_frame **frames)
 
 	if (unlikely(!test_bit(MLX5E_STATE_OPENED, &priv->state)))
 		return -ENETDOWN;
+
+	if (unlikely(flags & ~XDP_XMIT_FLAGS_MASK))
+		return -EINVAL;
 
 	sq_num = smp_processor_id();
 
@@ -295,28 +299,8 @@ int mlx5e_xdp_xmit(struct net_device *dev, int n, struct xdp_frame **frames)
 		}
 	}
 
+	if (unlikely(flags & XDP_XMIT_FLUSH))
+		mlx5e_xmit_xdp_doorbell(sq);
+
 	return n - drops;
 }
-
-void mlx5e_xdp_flush(struct net_device *dev)
-{
-	struct mlx5e_priv *priv = netdev_priv(dev);
-	struct mlx5e_xdpsq *sq;
-	int sq_num;
-
-	if (unlikely(!test_bit(MLX5E_STATE_OPENED, &priv->state)))
-		return;
-
-	sq_num = smp_processor_id();
-
-	if (unlikely(sq_num >= priv->channels.num))
-		return;
-
-	sq = &priv->channels.c[sq_num]->xdpsq;
-
-	if (unlikely(!test_bit(MLX5E_SQ_STATE_ENABLED, &sq->state)))
-		return;
-
-	mlx5e_xmit_xdp_doorbell(sq);
-}
-
