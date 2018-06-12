@@ -434,6 +434,12 @@ int  xdp_prognum4_ddos_filter_pktgen(struct xdp_md *ctx)
 				rec->dropped++;
 			return XDP_DROP;
 		}
+		/* Match some other evil traffic */
+		if (dest_port >= 12 && dest_port <=19) {
+			if (rec)
+				rec->dropped++;
+			return XDP_DROP;
+		}
 		break;
 	default:
 		cpu_idx = 0;
