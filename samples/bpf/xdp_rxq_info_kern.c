@@ -4,6 +4,8 @@
  *  Example howto extract XDP RX-queue info
  */
 #include <uapi/linux/bpf.h>
+#include <uapi/linux/if_ether.h>
+#include <uapi/linux/in.h>
 #include "bpf_helpers.h"
 
 /* Config setup from with userspace
@@ -14,6 +16,11 @@
 struct config {
 	__u32 action;
 	int ifindex;
+	__u32 options;
+};
+enum cfg_options_flags {
+	NO_TOUCH = 0x0U,
+	READ_MEM = 0x1U,
 };
 struct bpf_map_def SEC("maps") config_map = {
 	.type		= BPF_MAP_TYPE_ARRAY,
@@ -75,6 +82,18 @@ int  xdp_prognum0(struct xdp_md *ctx)
 		/* count this error case */
 		rec->issue++;
 		return XDP_ABORTED;
+	}
+
+	/* Default: Don't touch packet data, only count packets */
+	if (unlikely(config->options & READ_MEM)) {
+		struct ethhdr *eth = data;
+
+		if (eth + 1 > data_end)
+			return XDP_ABORTED;
+
+		/* Avoid compiler removing this: Drop non 802.3 Ethertypes */
+		if (ntohs(eth->h_proto) < ETH_P_802_3_MIN)
+			return XDP_ABORTED;
 	}
 
 	/* Update stats per rx_queue_index. Handle if rx_queue_index
