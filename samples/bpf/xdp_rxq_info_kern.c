@@ -84,18 +84,6 @@ int  xdp_prognum0(struct xdp_md *ctx)
 		return XDP_ABORTED;
 	}
 
-	/* Default: Don't touch packet data, only count packets */
-	if (unlikely(config->options & READ_MEM)) {
-		struct ethhdr *eth = data;
-
-		if (eth + 1 > data_end)
-			return XDP_ABORTED;
-
-		/* Avoid compiler removing this: Drop non 802.3 Ethertypes */
-		if (ntohs(eth->h_proto) < ETH_P_802_3_MIN)
-			return XDP_ABORTED;
-	}
-
 	/* Update stats per rx_queue_index. Handle if rx_queue_index
 	 * is larger than stats map can contain info for.
 	 */
@@ -108,6 +96,18 @@ int  xdp_prognum0(struct xdp_md *ctx)
 	rxq_rec->processed++;
 	if (key == MAX_RXQs)
 		rxq_rec->issue++;
+
+	/* Default: Don't touch packet data, only count packets */
+	if (unlikely(config->options & READ_MEM)) {
+		struct ethhdr *eth = data;
+
+		if (eth + 1 > data_end)
+			return XDP_ABORTED;
+
+		/* Avoid compiler removing this: Drop non 802.3 Ethertypes */
+		if (ntohs(eth->h_proto) < ETH_P_802_3_MIN)
+			return XDP_ABORTED;
+	}
 
 	return config->action;
 }
